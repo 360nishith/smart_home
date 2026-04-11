@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Remote</title>
+
+    <!-- mediapipe for hand tracking in the browser -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            padding: 40px 20px 20px;
+            color: #38bdf8;
+            font-size: 2.5rem;
+            margin: 0;
+            text-shadow: 0 4px 10px rgba(56, 189, 248, 0.3);
+        }
+
+        p.subtitle {
+            color: #cbd5e1;
+            margin-top: 0;
+            margin-bottom: 40px;
+        }
+
+        .dashboard-grid {
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            flex-wrap: wrap;
+            gap: 25px;
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 20px;
+            width: 250px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.active {
+            box-shadow: 0 0 35px rgba(34, 197, 94, 0.4);
+            border-color: rgba(34, 197, 94, 0.5);
+            background: rgba(22, 78, 99, 0.8);
+            transform: translateY(-5px);
+        }
+
+        .camera-card {
+            width: 320px;
+        }
+
+        .camera-wrapper {
+            position: relative;
+            width: 100%;
+            height: 240px;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #000;
+            margin: 15px 0;
+            border: 2px solid rgba(56, 189, 248, 0.3);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        video, canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+        }
+
+        .status {
+            font-size: 22px;
+            margin: 15px 0;
+            font-weight: 700;
+        }
+
+        .icon {
+            font-size: 55px;
+            margin: 15px 0;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .fan-spin {
+            animation: spin 1.5s linear infinite;
+            filter: drop-shadow(0 0 15px rgba(34, 197, 94, 0.8));
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        #feedbackText {
+            color: #94a3b8;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+    </style>
+</head>
+<body>
+
+<h1>Gesture Remote</h1>
+<p class="subtitle">Show your palm or fist to control devices</p>
+
+<div class="dashboard-grid">
+
+    <!-- webcam feed -->
+    <div class="card camera-card">
+        <h3 style="margin-top: 0;">Camera</h3>
+        <div class="camera-wrapper">
+            <video id="webcam" autoplay playsinline></video>
+            <canvas id="output_canvas"></canvas>
+        </div>
+        <div id="feedbackText">Starting camera...</div>
+    </div>
+
+    <!-- light control -->
+    <div class="card" id="LightCard">
+        <h3>Room Light</h3>
+        <span class="icon" id="LightIcon">💡</span>
+        <p id="LightStatus" class="status" style="color:#ef4444;">OFF</p>
+        <p style="font-size:12px; color:#94a3b8;">Palm to toggle</p>
+    </div>
+
+    <!-- fan control -->
+    <div class="card" id="FanCard">
+        <h3>Ceiling Fan</h3>
+        <span class="icon" id="FanIcon">🌀</span>
+        <p id="FanStatus" class="status" style="color:#ef4444;">OFF</p>
+        <p style="font-size:12px; color:#94a3b8;">Fist to toggle</p>
+    </div>
+
+</div>
+
+<!-- hidden canvas used to crop the hand region before sending -->
+<canvas id="crop_canvas" style="display:none;"></canvas>
+
+<script src="app.js"></script>
+
+</body>
+</html>
