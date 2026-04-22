@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Smart Home Gesture</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <!-- MediaPipe dependencies (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
+    <style>
+        :root {
+            --bg: #0b0f19;
+            --card: rgba(30, 41, 59, 0.4);
+            --primary: #38bdf8;
+            --secondary: #10b981;
+            --accent: #f59e0b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        /* --- Header --- */
+        nav {
+            padding: 1.5rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .logo { font-size: 1.5rem; font-weight: 600; color: var(--primary); }
+        .nav-actions { display: flex; gap: 1.5rem; align-items: center; }
+        .logout-btn { 
+            background: transparent; border: 1px solid rgba(255,255,255,0.2); 
+            color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;
+            transition: 0.3s;
+        }
+        .logout-btn:hover { background: rgba(255,255,255,0.1); }
+
+        /* --- Main Layout --- */
+        main { padding: 2rem 5%; max-width: 1200px; margin: 0 auto; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        @media (max-width: 968px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+
+        /* --- Video Section --- */
+        .vision-card {
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        #webcam { display: none; }
+        #output_canvas { width: 100%; height: 100%; object-fit: cover; }
+        #crop_canvas { display: none; }
+
+        .overlay-status {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: rgba(0,0,0,0.6);
+            padding: 0.5rem 1rem;
+            border-radius: 99px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--secondary); box-shadow: 0 0 10px var(--secondary); }
+
+        /* --- Controls Section --- */
+        .controls-pane { display: flex; flex-direction: column; gap: 1.5rem; }
+
+        .device-card {
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .device-card.active {
+            border-color: var(--primary);
+            background: rgba(56, 189, 248, 0.05);
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.1);
+        }
+
+        .icon-box {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            transition: 0.3s;
+        }
+
+        .active .icon-box { background: var(--primary); color: #0f172a; }
+
+        .device-info h3 { margin: 0; font-size: 1.2rem; }
+        .device-info p { margin: 0.2rem 0 0; color: var(--text-muted); font-size: 0.9rem; }
+
+        .feedback-banner {
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px dashed var(--primary);
+            padding: 1rem;
+            border-radius: 16px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        /* --- Project Description Section --- */
+        .project-details {
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 3rem;
+            margin-top: 2rem;
+        }
+
+        .project-details h2 { font-size: 2rem; margin-bottom: 2rem; color: var(--primary); }
+        .project-details p { line-height: 1.8; color: var(--text-muted); font-size: 1.1rem; }
+        
+        .tech-tags { display: flex; flex-wrap: wrap; gap: 0.8rem; margin: 2rem 0; }
+        .tag { 
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            padding: 0.4rem 1rem; border-radius: 99px; font-size: 0.85rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .feature-item h4 { color: white; margin-bottom: 0.5rem; }
+        .feature-item p { font-size: 0.95rem; }
+
+        /* Animations */
+        .fan-spin { animation: spin 2s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="logo">SmartHome AI</div>
+    <div class="nav-actions">
+        <span id="userEmail" style="font-size: 0.9rem; color: var(--text-muted);"></span>
+        <button class="logout-btn" onclick="logout()">Log Out</button>
+    </div>
+</nav>
+
+<main>
+    <div class="dashboard-grid">
+        <!-- Vision Layer -->
+        <section class="vision-card">
+            <div class="video-container">
+                <video id="webcam" autoplay playsinline></video>
+                <canvas id="output_canvas"></canvas>
+                <canvas id="crop_canvas"></canvas>
+                
+                <div class="overlay-status">
+                    <div class="status-dot"></div>
+                    <span id="aiStatus">AI Engine Active</span>
+                </div>
+            </div>
+            <div style="margin-top: 1.5rem;">
+                <div class="feedback-banner" id="feedbackText">Initializing webcam...</div>
+            </div>
+        </section>
+
+        <!-- Control Layer -->
+        <section class="controls-pane">
+            <div class="device-card" id="LightCard">
+                <div class="icon-box" id="LightIcon">💡</div>
+                <div class="device-info">
+                    <h3>Living Room Light</h3>
+                    <p>Status: <span id="LightStatus">OFF</span></p>
+                </div>
+            </div>
+
+            <div class="device-card" id="FanCard">
+                <div class="icon-box" id="FanIcon">🌀</div>
+                <div class="device-info">
+                    <h3>Ceiling Fan</h3>
+                    <p>Status: <span id="FanStatus">OFF</span></p>
+                </div>
+            </div>
+
+            <div style="margin-top: auto; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 12px; font-size: 0.85rem;">
+                <p style="margin: 0; color: var(--primary); font-weight: 600;">Gesture Guide:</p>
+                <p style="margin: 0.3rem 0 0; color: var(--text-muted);">🖐️ Palm = Toggle Light | ✊ Fist = Toggle Fan</p>
+            </div>
+
+            <!-- Recent Activity Log (retrieval) -->
+            <div style="background: rgba(0,0,0,0.2); border-radius: 20px; padding: 1.2rem; border: 1px solid rgba(255,255,255,0.05); flex-grow: 1;">
+                <h4 style="margin: 0 0 1rem; font-size: 1rem;">Recent Activity</h4>
+                <div id="logList" style="display: flex; flex-direction: column; gap: 0.8rem; font-size: 0.85rem;">
+                    <div style="color: var(--text-muted); text-align: center;">Loading activity logs...</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Project Description Section -->
+    <section class="project-details">
+        <h2>About the Project</h2>
+        <p>
+            This <strong>AI-Powered Smart Home Gesture Control System</strong> is a full-stack solution designed to provide contactless control over home environment. By bridging the gap between Computer Vision and IoT state management, the system offers an accessible alternative to tradition physical switches and voice commands.
+        </p>
+
+        <div class="tech-tags">
+            <div class="tag">HTML5/CSS3</div>
+            <div class="tag">JavaScript (ES6)</div>
+            <div class="tag">Node.js / Express</div>
+            <div class="tag">Python (Flask)</div>
+            <div class="tag">TensorFlow</div>
+            <div class="tag">MediaPipe</div>
+            <div class="tag">Supabase (PostgreSQL)</div>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-item">
+                <h4>Dual-Stage AI Pipeline</h4>
+                <p>Combines geometric detection (MediaPipe Hands) with custom CNN classification (MobileNetV2) for maximum accuracy.</p>
+            </div>
+            <div class="feature-item">
+                <h4>Full-Stack Integration</h4>
+                <p>Features a robust Node.js backend for authenticated sessions and a Python-powered inference engine.</p>
+            </div>
+            <div class="feature-item">
+                <h4>Dynamic Performance</h4>
+                <p>Processes real-time video frames with sub-500ms latency, providing instant visual feedback on appliance states.</p>
+            </div>
+            <div class="feature-item">
+                <h4>Cloud Observability</h4>
+                <p>Every gesture-triggered action is automatically persisted to Supabase, enabling a complete audit trail of device logs.</p>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script src="/app.js"></script>
+<script>
+    // Simple Auth Protection
+    const sessionStr = localStorage.getItem('sb_session');
+    if (!sessionStr) {
+        window.location.href = '/login.html';
+    } else {
+        const session = JSON.parse(sessionStr);
+        document.getElementById('userEmail').innerText = session.user.email;
+    }
+
+    function logout() {
+        localStorage.removeItem('sb_session');
+        window.location.href = '/login.html';
+    }
+</script>
+
+</body>
+</html>

@@ -53,21 +53,27 @@ function onResults(results) {
             yMax = Math.max(yMax, y);
         });
 
-        // generous padding so we don't clip fingertips
-        const pad = 20;
-
-        // Make the bounding box a square to preserve aspect ratio when resized to 128x128
-        let boxWidth = xMax - xMin;
-        let boxHeight = yMax - yMin;
-        let size = Math.max(boxWidth, boxHeight) + pad * 2;
+        // Instead of a tight dynamic bounding box which changes scale,
+        // we anchor the crop size to the physical distance between Wrist (0) and Middle Finger MCP (9).
+        // This ensures a fist appears physically smaller than an open palm in the final 128x128 image,
+        // exactly matching the relative scale found in the Rock-Paper-Scissors training dataset.
+        const wrist = landmarks[0];
+        const mcp = landmarks[9];
+        const dx = (wrist.x - mcp.x) * canvasElement.width;
+        const dy = (wrist.y - mcp.y) * canvasElement.height;
+        const dist = Math.sqrt(dx*dx + dy*dy);
         
-        let centerX = xMin + boxWidth / 2;
-        let centerY = yMin + boxHeight / 2;
+        let centerX = xMin + (xMax - xMin) / 2;
+        let centerY = yMin + (yMax - yMin) / 2;
 
+        let size = Math.floor(dist * 4.8); // 4.8x the bone length comfortably fits an open grown palm
+        
         xMin = Math.max(0, Math.floor(centerX - size / 2));
         yMin = Math.max(0, Math.floor(centerY - size / 2));
-        xMax = Math.min(canvasElement.width, Math.floor(centerX + size / 2));
-        yMax = Math.min(canvasElement.height, Math.floor(centerY + size / 2));
+        // Force square aspect ratio by defining xMax and yMax purely from xMin/yMin + size
+        // If it clips off-screen, sendCropToServer will handle it natively via canvas drawing
+        xMax = Math.min(canvasElement.width, xMin + size);
+        yMax = Math.min(canvasElement.height, yMin + size);
 
         // draw the crop rectangle
         canvasCtx.strokeStyle = "#22c55e";
@@ -76,7 +82,7 @@ function onResults(results) {
 
         // send the crop to the backend for classification
         if (!isPredicting && (xMax > xMin) && (yMax > yMin)) {
-            sendCropToServer(results.image, xMin, yMin, xMax - xMin, yMax - yMin);
+            sendCropToServer(results.image, xMin, yMin, size, size);
         }
     } else {
         feedbackText.innerText = "Waiting for hand...";
@@ -126,7 +132,7 @@ async function sendCropToServer(imageSource, x, y, width, height) {
                 feedbackText.style.color = "#22c55e";
                 updateUI("Light", data.light);
                 updateUI("Fan", data.fan);
-                voteBuffer = []; // Reset after action to prevent double-triggering
+                voteBuffer = []; // Reset after successful action to require fresh stability for next toggle
             } else if (data.status === "ignored") {
                 if (data.reason.includes("Low confidence")) {
                     feedbackText.innerText = "Hold still...";

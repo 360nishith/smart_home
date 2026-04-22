@@ -12,7 +12,7 @@ import shutil
 
 # paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATASET_DIR = os.path.join(BASE_DIR, "archive", "rps", "rps")
+DATASET_DIR = os.path.join(BASE_DIR, "archive", "real_hand_dataset")
 OUTPUT_MODEL = os.path.join(BASE_DIR, "ml", "saved_model.h5")
 BACKUP_MODEL = os.path.join(BASE_DIR, "ml", "saved_model_backup.h5")
 
@@ -47,38 +47,31 @@ def setup_temp_dirs():
     print()
 
 
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.layers import GlobalAveragePooling2D
+
 def build_model():
-    """3-block CNN with batch norm and dropout. Nothing fancy, just solid."""
+    """Transfer Learning with MobileNetV2 for better generalization."""
+    base_model = MobileNetV2(
+        input_shape=(IMG_SIZE, IMG_SIZE, 3),
+        include_top=False,
+        weights='imagenet'
+    )
+    # Freeze pre-trained weights so we only train the new top layers
+    base_model.trainable = False
+
     model = Sequential([
-        # block 1
-        Conv2D(32, (3, 3), activation='relu', padding='same',
-               input_shape=(IMG_SIZE, IMG_SIZE, 3)),
-        BatchNormalization(),
-        MaxPooling2D(2, 2),
-        Dropout(0.25),
-
-        # block 2
-        Conv2D(64, (3, 3), activation='relu', padding='same'),
-        BatchNormalization(),
-        MaxPooling2D(2, 2),
-        Dropout(0.25),
-
-        # block 3
-        Conv2D(128, (3, 3), activation='relu', padding='same'),
-        BatchNormalization(),
-        MaxPooling2D(2, 2),
-        Dropout(0.25),
-
-        # classifier head
-        Flatten(),
-        Dense(256, activation='relu'),
-        Dropout(0.5),
+        base_model,
+        GlobalAveragePooling2D(),
+        Dense(128, activation='relu'),
+        Dropout(0.3),
         Dense(2, activation='softmax')
     ])
 
     from tensorflow.keras.optimizers import Adam
+    # Use a slightly higher learning rate initially for transfer learning top layers
     model.compile(
-        optimizer=Adam(learning_rate=0.0005),
+        optimizer=Adam(learning_rate=0.001),
         loss='categorical_crossentropy',
         metrics=['accuracy']
     )
@@ -90,8 +83,6 @@ def train():
     print("Setting up dataset folders...")
     setup_temp_dirs()
 
-    # augmentation — helps the model generalize to real webcam images
-    # instead of just memorizing the synthetic backgrounds
     train_gen = ImageDataGenerator(
         rescale=1.0 / 255,
         rotation_range=15,
@@ -99,8 +90,7 @@ def train():
         height_shift_range=0.1,
         zoom_range=0.15,
         horizontal_flip=True,
-        brightness_range=[0.8, 1.2],
-        validation_split=0.2
+        brightness_range=[0.8, 1.2]
     )
 
     print("Loading training data...")
@@ -109,21 +99,9 @@ def train():
         target_size=(IMG_SIZE, IMG_SIZE),
         batch_size=BATCH_SIZE,
         class_mode='categorical',
-        subset='training',
         shuffle=True
     )
 
-    print("Loading validation data...")
-    val_data = train_gen.flow_from_directory(
-        TEMP_DIR,
-        target_size=(IMG_SIZE, IMG_SIZE),
-        batch_size=BATCH_SIZE,
-        class_mode='categorical',
-        subset='validation',
-        shuffle=False
-    )
-
-    # print class mapping so we know the order matches what the server expects
     print(f"\nClass indices: {train_data.class_indices}")
     print(f"(server expects: 0=fist, 1=palm)\n")
 
@@ -131,34 +109,20 @@ def train():
     model.summary()
 
     callbacks = [
-        EarlyStopping(
-            monitor='val_loss',
-            patience=5,
-            restore_best_weights=True,
-            verbose=1
-        ),
         ReduceLROnPlateau(
-            monitor='val_loss',
+            monitor='loss',
             factor=0.5,
             patience=3,
-            verbose=1
-        ),
-        ModelCheckpoint(
-            OUTPUT_MODEL,
-            monitor='val_accuracy',
-            save_best_only=True,
             verbose=1
         )
     ]
 
-    # back up old model before we overwrite
     if os.path.exists(OUTPUT_MODEL):
         shutil.copy2(OUTPUT_MODEL, BACKUP_MODEL)
         print(f"Backed up old model to {BACKUP_MODEL}")
 
-    EPOCHS = 30
+    EPOCHS = 10
     
-    # Calculate class weights safely to handle imbalance (1566 fist vs 712 palm)
     total = train_data.samples
     num_classes = train_data.num_classes
     class_weights = {}
@@ -169,15 +133,12 @@ def train():
     print("\nStarting training...\n")
     history = model.fit(
         train_data,
-        validation_data=val_data,
         epochs=EPOCHS,
         callbacks=callbacks,
         class_weight=class_weights
     )
 
-    # final results
-    best_val_acc = max(history.history['val_accuracy'])
-    print(f"\nDone. Best validation accuracy: {best_val_acc:.4f}")
+    model.save(OUTPUT_MODEL)
     print(f"Model saved to: {OUTPUT_MODEL}")
 
     # clean up temp folder

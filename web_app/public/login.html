@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Smart Home Gesture</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: rgba(30, 41, 59, 0.7);
+            --primary: #38bdf8;
+            --primary-hover: #0ea5e9;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .login-card {
+            background: var(--card);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2.5rem;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            background: var(--primary);
+            color: #0f172a;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(56, 189, 248, 0.3);
+        }
+
+        .toggle-text {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .toggle-text span {
+            color: var(--primary);
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        #message {
+            margin-top: 1rem;
+            text-align: center;
+            font-size: 0.9rem;
+            min-height: 1.2rem;
+        }
+
+        .success { color: #22c55e; }
+        .error { color: #ef4444; }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <h1 id="title">Welcome Back</h1>
+    <p class="subtitle" id="subtitle">Log in to control your smart home</p>
+
+    <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="email" placeholder="name@example.com">
+    </div>
+
+    <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="••••••••">
+    </div>
+
+    <button id="authBtn">Log In</button>
+
+    <div id="message"></div>
+
+    <p class="toggle-text" id="toggleWrapper">
+        Don't have an account? <span id="toggleAuth">Sign Up</span>
+    </p>
+</div>
+
+<script>
+    const title = document.getElementById('title');
+    const subtitle = document.getElementById('subtitle');
+    const authBtn = document.getElementById('authBtn');
+    const toggleAuth = document.getElementById('toggleAuth');
+    const message = document.getElementById('message');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+
+    let isLogin = true;
+
+    toggleAuth.addEventListener('click', () => {
+        isLogin = !isLogin;
+        title.innerText = isLogin ? "Welcome Back" : "Create Account";
+        subtitle.innerText = isLogin ? "Log in to control your smart home" : "Join the future of gesture control";
+        authBtn.innerText = isLogin ? "Log In" : "Sign Up";
+        toggleAuth.innerText = isLogin ? "Sign Up" : "Log In";
+        document.getElementById('toggleWrapper').innerHTML = isLogin 
+            ? `Don't have an account? <span id="newToggle">Sign Up</span>`
+            : `Already have an account? <span id="newToggle">Log In</span>`;
+        
+        // Re-attach listener to the new span
+        document.getElementById('newToggle').addEventListener('click', () => toggleAuth.click());
+    });
+
+    authBtn.addEventListener('click', async () => {
+        const email = emailInput.value;
+        const password = passwordInput.value;
+
+        if (!email || !password) {
+            showMessage("Please fill in all fields", "error");
+            return;
+        }
+
+        const endpoint = isLogin ? '/auth/login' : '/auth/signup';
+        authBtn.disabled = true;
+        authBtn.innerText = isLogin ? "Logging in..." : "Signing up...";
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showMessage(isLogin ? "Login successful!" : "Account created! You can now log in.", "success");
+                if (isLogin) {
+                    localStorage.setItem('sb_session', JSON.stringify(data.session));
+                    localStorage.setItem('user_email', email); // Store email for logs
+                    setTimeout(() => window.location.href = '/', 1000);
+                } else {
+                    setTimeout(() => toggleAuth.click(), 1500);
+                }
+            } else {
+                showMessage(data.error, "error");
+            }
+        } catch (err) {
+            showMessage("Server connection failed", "error");
+        } finally {
+            authBtn.disabled = false;
+            authBtn.innerText = isLogin ? "Log In" : "Sign Up";
+        }
+    });
+
+    function showMessage(text, type) {
+        message.innerText = text;
+        message.className = type;
+    }
+
+    // Check if already logged in
+    const session = localStorage.getItem('sb_session');
+    if (session) {
+        window.location.href = '/';
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,26 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+ENV/
+env/
+
+# Environment Secrets (CRITICAL)
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large Model Files (Keep them local if possible)
+ml/saved_model.h5
+ml/saved_model_backup.h5
+archive/

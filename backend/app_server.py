@@ -10,15 +10,22 @@ import numpy as np
 import cv2
 import time
 from tensorflow.keras.models import load_model
-from backend.backend_api import send_to_db
 
 app = Flask(__name__)
 CORS(app)
 
 # --- load the trained CNN ---
+# Calculate absolute path to model (expected in ../ml/saved_model.h5 relative to this script)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_PATH = os.path.join(BASE_DIR, "ml", "saved_model.h5")
+
 try:
-    model = load_model("ml/saved_model.h5")
-    print("Model loaded.")
+    if os.path.exists(MODEL_PATH):
+        model = load_model(MODEL_PATH)
+        print(f"Model loaded from: {MODEL_PATH}")
+    else:
+        print(f"ERROR: Model file not found at {MODEL_PATH}")
+        model = None
 except Exception as e:
     print(f"Could not load model: {e}")
     model = None
@@ -111,7 +118,7 @@ def predict_gesture():
             action_taken = f"Fan turned {fan_state}"
 
         if command:
-            send_to_db(command)
+            # Note: Logging is now handled by the Node.js server to ensure user context
             return jsonify({
                 "status": "triggered",
                 "action": action_taken,
@@ -129,6 +136,11 @@ def predict_gesture():
 
 
 if __name__ == '__main__':
-    print("\n--- Smart Home Gesture Server ---")
-    print("Listening on http://127.0.0.1:5000\n")
+    print("\n" + "="*40)
+    print("🚀 SMART HOME GESTURE SERVER")
+    print("="*40)
+    print(f"📡 Status: LISTENING")
+    print(f"🔗 URL:    http://127.0.0.1:5000")
+    print(f"🧠 Model:  MobileNetV2 (Transfer Learning)")
+    print("="*40 + "\n")
     app.run(host='127.0.0.1', port=5000)
