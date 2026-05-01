@@ -93,12 +93,18 @@ app.get('/logs', async (req, res) => {
     res.json(data);
 });
 
+// Health check
+app.get('/health', (req, res) => {
+    res.json({ status: "ok", supabase: !!supabase });
+});
+
 // Serve frontend - fallback for all other requests
+// Note: In development, Vite handles the frontend.
 app.use((req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.status(404).json({ error: "API endpoint not found" });
 });
 
 app.listen(PORT, () => {
-    console.log(`\n🚀 Web App Server running at http://localhost:${PORT}`);
-    console.log(`📡 Proxying AI requests to: ${process.env.FLASK_SERVER_URL}\n`);
+    console.log(`\n🚀 Smart Home Backend running at http://localhost:${PORT}`);
+    console.log(`📡 AI Proxy: ${process.env.FLASK_SERVER_URL}\n`);
 });

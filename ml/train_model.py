@@ -12,7 +12,7 @@ import shutil
 
 # paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATASET_DIR = os.path.join(BASE_DIR, "archive", "real_hand_dataset")
+DATASET_DIR = os.path.join(BASE_DIR, "dataset")
 OUTPUT_MODEL = os.path.join(BASE_DIR, "ml", "saved_model.h5")
 BACKUP_MODEL = os.path.join(BASE_DIR, "ml", "saved_model_backup.h5")
 
@@ -30,10 +30,10 @@ def setup_temp_dirs():
     if os.path.exists(TEMP_DIR):
         shutil.rmtree(TEMP_DIR)
 
-    # map rock -> fist, paper -> palm
+    # Use folders directly from dataset
     mapping = {
-        "rock": "fist",
-        "paper": "palm"
+        "fist": "fist",
+        "palm": "palm"
     }
 
     for src_name, dst_name in mapping.items():
