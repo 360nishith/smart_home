@@ -8,11 +8,11 @@
 
 ```
 smart_home_gesture/
+├── frontend/
+│   ├── login.html
+│   ├── index.html
+│   └── app.js
 ├── backend/
-│   ├── public/
-│   │   ├── login.html
-│   │   ├── index.html
-│   │   └── app.js
 │   ├── server.js
 │   ├── package.json
 │   ├── package-lock.json
@@ -33,7 +33,7 @@ smart_home_gesture/
 
 ## 📂 `backend/` — The Node.js Web Server
 
-This folder is the **heart of the web application**. It contains the Express.js server that handles all HTTP communication and serves every page the user sees.
+This folder contains the Express.js server that handles all HTTP communication and serves the frontend files to the browser.
 
 ---
 
@@ -116,13 +116,13 @@ PORT=3000                                 ← Which port Node.js listens on
 
 ---
 
-## 📂 `backend/public/` — The Frontend (HTML/CSS/JS)
+## 📂 `frontend/` — The Frontend (HTML/CSS/JS)
 
-These three files are the **entire user interface**. They are static files served directly by `server.js` via `express.static()`. No build step, no framework, no compilation needed.
+These three files are the **entire user interface**. They are static files served directly by `server.js` via `express.static()` pointing to `../frontend`. No build step, no framework, no compilation needed.
 
 ---
 
-### `backend/public/login.html`
+### `frontend/login.html`
 
 | | |
 |---|---|
@@ -139,7 +139,7 @@ These three files are the **entire user interface**. They are static files serve
 
 ---
 
-### `backend/public/index.html`
+### `frontend/index.html`
 
 | | |
 |---|---|
@@ -167,7 +167,7 @@ It has **two tabs** switchable without a page reload:
 
 ---
 
-### `backend/public/app.js`
+### `frontend/app.js`
 
 | | |
 |---|---|
@@ -347,8 +347,8 @@ Covers the non-technical overview, technical stack, step-by-step pipeline, key c
 | **Setup (one-time)** | `supabase_setup.sql` (run in Supabase SQL editor) |
 | **Training (one-time)** | `ml/train_model.py` → produces `ml/saved_model.h5` |
 | **Every app launch** | `ml/server.py` (starts Flask on port 5000), `backend/server.js` (starts Node.js on port 3000) |
-| **Every page load** | `backend/public/login.html` or `backend/public/index.html` |
-| **Every webcam frame** | `backend/public/app.js` → `backend/server.js /predict` → `ml/server.py /predict` |
-| **Every gesture trigger** | `backend/public/app.js` → `backend/server.js /log-state` → Supabase `device_states` table |
-| **Every dashboard open** | `backend/public/app.js` → `backend/server.js /logs` → Supabase `device_states` table |
+| **Every page load** | `frontend/login.html` or `frontend/index.html` |
+| **Every webcam frame** | `frontend/app.js` → `backend/server.js /predict` → `ml/server.py /predict` |
+| **Every gesture trigger** | `frontend/app.js` → `backend/server.js /log-state` → Supabase `device_states` table |
+| **Every dashboard open** | `frontend/app.js` → `backend/server.js /logs` → Supabase `device_states` table |
 | **Never at runtime** | `dataset/`, `.gitignore`, `package-lock.json`, `supabase_setup.sql`, `.md` files |

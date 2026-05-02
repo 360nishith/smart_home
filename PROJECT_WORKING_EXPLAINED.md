@@ -20,7 +20,7 @@ Imagine walking into a room and simply showing your **Palm** to turn on the ligh
 The project is built using a **Full-Stack Architecture**, combining modern web technologies with specialized machine learning services.
 
 ### The Technology Stack:
-*   **Frontend**: HTML5 + CSS3 + JavaScript (ES6+) — served directly by the Node.js backend
+*   **Frontend**: HTML5 + CSS3 + JavaScript (ES6+) — lives in `frontend/`, served by the Node.js backend
 *   **Backend**: Node.js + Express.js (The Orchestrator & Static File Server)
 *   **AI Engine**: Python (Flask) + TensorFlow + OpenCV (The Recognition)
 *   **Cloud/DB**: Supabase (Authentication & PostgreSQL Database)
@@ -54,16 +54,15 @@ Here is exactly what happens when you show a gesture:
 ## 4. Key Components Deep Dive
 
 ### 📂 `backend/`
-*   **`server.js`**: The main Express server. Serves all HTML/CSS/JS files from `public/`, and exposes API routes for auth, prediction proxying, and Supabase logging.
+*   **`server.js`**: The main Express server. Serves all HTML/CSS/JS files from `frontend/` (one level up, via `../frontend`), and exposes API routes for auth, prediction proxying, and Supabase logging.
 *   **`.env`**: Stores sensitive credentials — `SUPABASE_URL`, `SUPABASE_KEY`, `FLASK_SERVER_URL`, `PORT`.
 
-### 📂 `backend/public/` *(The entire frontend lives here)*
+### 📂 `frontend/` *(The entire frontend lives here)*
 *   **`login.html`**: Two-panel login page — left panel describes the project, right panel has the email/password auth form (Login + Signup toggle). Communicates with `/auth/login` and `/auth/signup` routes.
 *   **`index.html`**: The main dashboard with two tabs:
     - **Dashboard tab**: Live webcam feed with hand skeleton overlay, a Prediction Result card (gesture name + confidence bar), device cards (Light & Fan), gesture guide, and a Recent Activity log fetched from Supabase.
     - **About Project tab**: Full project description, tech stack tags, feature cards, and a 5-step pipeline diagram.
 *   **`app.js`**: All frontend JavaScript — MediaPipe integration, gesture detection, Base64 image capture, fetch calls to `/predict` and `/log-state`, confidence score rendering, and activity log fetching from `/logs`.
-
 ### 📂 `ml/`
 *   **`server.py`**: A Flask server that loads the TensorFlow model and performs real-time classification. Returns gesture label, confidence score, and device states.
 *   **`train_model.py`**: Trains a MobileNetV2 CNN on your dataset images and saves `saved_model.h5`.
@@ -133,7 +132,7 @@ npm start
 ```
 The app is now live at **http://localhost:3000**
 
-> **Note:** No separate frontend terminal is needed. The Node.js server serves `login.html`, `index.html`, and `app.js` directly from `backend/public/`.
+> **Note:** No separate frontend terminal is needed. The Node.js server serves `login.html`, `index.html`, and `app.js` directly from the `frontend/` folder at the project root.
 
 ### 5. Open the App
 Navigate to `http://localhost:3000/login.html` in your browser. Log in or create an account, and start controlling devices with gestures.
